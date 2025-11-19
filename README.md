@@ -5,6 +5,7 @@
 - [ ] When cliking a video a modal should open explaining the company and story of the video
 - [ ] Add payment gateway
 - [ ] Add analytics
+- [ ] Add projects and nodes statefulness
 
 ### FEEDBACK
 1) Pq en ingles si los ejemplos son recontra latinos?
