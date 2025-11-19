@@ -1,0 +1,242 @@
+'use client';
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  ReactFlow,
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  Connection,
+  NodeTypes,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import UploadNode from './components/UploadNode';
+import GenerationNode from './components/GenerationNode';
+import { ImageNode, ImageNodeData } from './types';
+
+const nodeTypes: NodeTypes = {
+  upload: UploadNode,
+  generation: GenerationNode,
+};
+
+export default function App() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [nodes, setNodes] = useState<ImageNode[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [nodeId, setNodeId] = useState(1);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) =>
+      setNodes((nds) => applyNodeChanges(changes, nds) as ImageNode[]),
+    []
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
+  );
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    []
+  );
+
+  // Add Upload Node
+  const addUploadNode = useCallback(() => {
+    const id = `upload-${nodeId}`;
+    const newNode: ImageNode = {
+      id,
+      type: 'upload',
+      position: { x: 100, y: 100 + nodeId * 50 },
+      data: { type: 'upload' },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setNodeId((prev) => prev + 1);
+  }, [nodeId]);
+
+  // Add Generation Node
+  const addGenerationNode = useCallback(() => {
+    const id = `generation-${nodeId}`;
+    const newNode: ImageNode = {
+      id,
+      type: 'generation',
+      position: { x: 400, y: 100 + nodeId * 50 },
+      data: { type: 'generation' },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setNodeId((prev) => prev + 1);
+  }, [nodeId]);
+
+  // Handle node data updates
+  useEffect(() => {
+    const handleNodeDataUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        nodeId: string;
+        data: Partial<ImageNodeData>;
+      }>;
+      const { nodeId, data } = customEvent.detail;
+
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
+        )
+      );
+    };
+
+    window.addEventListener('nodeDataUpdate', handleNodeDataUpdate);
+    return () => window.removeEventListener('nodeDataUpdate', handleNodeDataUpdate);
+  }, []);
+
+  // Handle image generation
+  useEffect(() => {
+    const handleGenerateImage = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ nodeId: string; prompt: string }>;
+      const { nodeId, prompt } = customEvent.detail;
+
+      // Find all connected input nodes
+      const connectedEdges = edges.filter((edge) => edge.target === nodeId);
+      const inputImages: string[] = [];
+
+      connectedEdges.forEach((edge) => {
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        if (sourceNode?.data.image) {
+          inputImages.push(sourceNode.data.image);
+        }
+      });
+
+      if (inputImages.length === 0) {
+        alert('Please connect at least one image node as input');
+        return;
+      }
+
+      try {
+        // Update node to show generating state
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, isGenerating: true } }
+              : node
+          )
+        );
+
+        // Call API to generate image
+        const response = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: inputImages, prompt }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate image');
+        }
+
+        const data = await response.json();
+
+        // Update node with generated image
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, image: data.image, isGenerating: false } }
+              : node
+          )
+        );
+      } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Failed to generate image. Check console for details.');
+
+        // Reset generating state
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, isGenerating: false } }
+              : node
+          )
+        );
+      }
+    };
+
+    window.addEventListener('generateImage', handleGenerateImage);
+    return () => window.removeEventListener('generateImage', handleGenerateImage);
+  }, [nodes, edges]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+    }
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  return (
+    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      {/* Toolbar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          zIndex: 10,
+          display: 'flex',
+          gap: '10px',
+          background: 'white',
+          padding: '10px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        }}
+      >
+        <button
+          onClick={addUploadNode}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          + Upload Node
+        </button>
+        <button
+          onClick={addGenerationNode}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#8b5cf6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          + Generation Node
+        </button>
+      </div>
+
+      {/* React Flow Canvas */}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        fitView
+      />
+    </div>
+  );
+}

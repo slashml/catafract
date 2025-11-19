@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import VideoPlayer from './components/VideoPlayer';
 
 type PortfolioList = {
@@ -15,7 +16,7 @@ export default function Home() {
     { playbackId: 'tcjPxqkq7V4RBiqze4LxxVx02agmzSmRCpa2N1iP1wH8', title: 'Kevin Gomez (GDG)' },
     { playbackId: 'Stlg6GslUE6VXRnMjuH2scvri00bWjJ800qlNogLFnUm00', title: 'Grúas Esmy' },
     { playbackId: 'nsLRWpqpdmtYipbB31SrKKbQnWnB1IGzVjnFTVphPvs', title: 'Trascendental' },
-    { playbackId: 'NJKfO2Y5AcyeufR7VFpXXxMty0057xzZLO9NMbPK6c02k', title: "Wonder Kids"},
+    { playbackId: 'NJKfO2Y5AcyeufR7VFpXXxMty0057xzZLO9NMbPK6c02k', title: "Wonder Kids" },
     { playbackId: 'T200mP1l00d8BMdtXXghxhdaguAsS7daPeSir02ewcpsJM', title: 'Magical Book' },
   ];
 
@@ -38,6 +39,15 @@ export default function Home() {
             Someone out there needs it.
           </p>
 
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            onClick={() => signIn('google', { callbackUrl: '/canvas' })}
+            className="bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-200 transition-colors"
+          >
+            Sign In to Create
+          </button>
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-3 gap-0.5 gap-y-0.5'>
