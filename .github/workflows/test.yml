@@ -10,6 +10,7 @@ jobs:
   test:
     name: Run Bun Tests
     runs-on: ubuntu-latest
+    environment: production
     env:
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
       AZURE_COSMOS_CONNECTION_STRING: ${{ secrets.AZURE_COSMOS_CONNECTION_STRING }}
