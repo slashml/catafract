@@ -8,6 +8,24 @@ const handler = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
         }),
     ],
+    callbacks: {
+        async signIn({ user }) {
+            if (user.email) {
+                const { getUser, updateUser } = await import("@/lib/azure");
+                const existingUser = await getUser(user.email);
+
+                if (!existingUser) {
+                    await updateUser(user.id, {
+                        email: user.email,
+                        name: user.name,
+                        image: user.image,
+                        createdAt: new Date().toISOString(),
+                    });
+                }
+            }
+            return true;
+        },
+    },
     pages: {
         signIn: '/', // Redirect to home for sign-in
     },

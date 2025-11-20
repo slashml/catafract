@@ -11,7 +11,8 @@ const cosmosClient = new CosmosClient(
 
 const containerName = "catafract";
 const databaseName = "catafract";
-const containerId = "generations";
+const generationsContainerId = "generations";
+const usersContainerId = "users";
 
 export async function uploadToBlob(file: Buffer, filename: string, mimeType: string): Promise<string> {
   const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -26,8 +27,56 @@ export async function uploadToBlob(file: Buffer, filename: string, mimeType: str
 
 export async function saveToCosmos(item: any) {
   const database = cosmosClient.database(databaseName);
-  const container = database.container(containerId);
+  const container = database.container(generationsContainerId);
 
   const { resource } = await container.items.create(item);
   return resource;
+}
+
+export async function getUser(email: string) {
+  const database = cosmosClient.database(databaseName);
+  const container = database.container(usersContainerId);
+
+  try {
+    const { resources } = await container.items.query({
+      query: "SELECT * FROM c WHERE c.email = @email",
+      parameters: [{ name: "@email", value: email }]
+    }, { partitionKey: email }).fetchAll();
+
+    if (resources.length > 0) {
+      return resources[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.log("Error finding user:", error);
+    return null;
+  }
+}
+
+export async function updateUser(id: string, data: any) {
+  const database = cosmosClient.database(databaseName);
+  const container = database.container(usersContainerId);
+
+  const { resources } = await container.items.query({
+    query: "SELECT * FROM c WHERE c.id = @id",
+    parameters: [{ name: "@id", value: id }]
+  }).fetchAll();
+
+  if (resources.length > 0) {
+    const existingUser = resources[0];
+    const updatedUser = { ...existingUser, ...data };
+
+    const { resource } = await container.item(id, existingUser.email).replace(updatedUser);
+    return resource;
+  }
+  if (data.email && id) {
+    const { resource } = await container.items.create({
+      id,
+      ...data
+    });
+    return resource;
+  }
+  console.error(`Cannot create user ${id} without email (partition key)`);
+  return null;
 }
