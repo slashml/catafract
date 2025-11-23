@@ -34,16 +34,19 @@ export function Navbar() {
             </div> */}
 
             <div className="flex items-center gap-4">
-                <button
-                    onClick={() => signIn('google', { callbackUrl: '/canvas' })}
+                <Link
+                    href="/signup"
                     className="text-sm font-medium text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white transition-colors"
                 >
                     Log in
-                </button>
-                <Button className="bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 rounded-lg px-6"
-                    onClick={() => signIn('google', { callbackUrl: '/canvas' })}
+                </Link>
+                <Button
+                    asChild
+                    className="bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 rounded-lg px-6"
                 >
-                    Sign Up
+                    <Link href="/signup">
+                        Sign Up
+                    </Link>
                 </Button>
             </div>
         </nav>

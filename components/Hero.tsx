@@ -1,8 +1,8 @@
 'use client';
 
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { signIn } from 'next-auth/react';
 
 export function Hero() {
     return (
@@ -27,10 +27,13 @@ export function Hero() {
                     </p>
 
                     <div className="flex w-full max-w-md justify-center gap-2 p-1.5 rounded-xl">
-                        <Button className="h-12 px-8 rounded-lg bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-                            onClick={() => signIn('google', { callbackUrl: '/canvas' })}
+                        <Button
+                            className="h-12 px-8 rounded-lg bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                            asChild
                         >
-                            Get started
+                            <Link href="/signup">
+                                Get started
+                            </Link>
                         </Button>
                     </div>
                 </div>
