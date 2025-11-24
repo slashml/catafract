@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
     // Generate image using Gemini 2.5 Flash Image model
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
+      // model: 'gemini-2.5-flash-image',
       contents: contents,
     });
 

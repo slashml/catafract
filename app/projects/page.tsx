@@ -19,8 +19,6 @@ export default function ProjectsPage() {
                 const res = await fetch('/api/user/status');
                 const data = await res.json();
 
-                console.log(data);
-
                 setIsPro(data.isPro);
                 setUserData(data);
                 if (data.id) {
