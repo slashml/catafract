@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { ImageNode } from '../types';
+import { Image as ImageIcon } from 'lucide-react';
 
 function UploadNode({ data, id }: NodeProps<ImageNode>) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,60 +42,109 @@ function UploadNode({ data, id }: NodeProps<ImageNode>) {
   };
 
   return (
-    <div
-      style={{
-        padding: '10px',
-        border: '2px solid #3b82f6',
-        borderRadius: '8px',
-        background: 'white',
-        minWidth: '200px',
-      }}
-    >
+    <div style={{ position: 'relative' }}>
+      {/* Floating Header */}
       <div
         style={{
-          fontWeight: 'bold',
-          marginBottom: '10px',
-          color: '#3b82f6',
+          position: 'absolute',
+          top: '-24px',
+          left: '0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
         }}
       >
-        Upload Image
+        <ImageIcon className="w-3 h-3 text-gray-500" />
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 500,
+          color: '#6b7280',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }}>
+          Creation
+        </span>
       </div>
 
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
+      {/* Main Container */}
+      <div
         style={{
-          marginBottom: '10px',
-          fontSize: '12px',
+          padding: '0',
+          border: '1px solid #e5e7eb',
+          borderRadius: '16px',
+          background: 'white',
+          minWidth: '200px',
+          minHeight: '200px',
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
+        {!data.image && (
+          <div style={{
+            width: '100%',
+            height: '200px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f9fafb',
+            cursor: 'pointer',
+            position: 'relative',
+          }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                opacity: 0,
+                cursor: 'pointer',
+              }}
+            />
+            <ImageIcon className="w-8 h-8 text-gray-300 mb-2" />
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+              Click to upload
+            </span>
+          </div>
+        )}
 
-      {data.image && (
-        <div style={{ marginTop: '10px' }}>
+        {data.image && (
           <img
             src={data.image}
             alt="Uploaded"
             style={{
               width: '100%',
-              maxWidth: '200px',
-              borderRadius: '4px',
-              border: '1px solid #e5e7eb',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
             }}
           />
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Output handle */}
+      {/* Custom Handle */}
       <Handle
         type="source"
         position={Position.Right}
         style={{
-          background: '#3b82f6',
-          width: '12px',
-          height: '12px',
+          width: '24px',
+          height: '24px',
+          background: '#1f2937',
+          border: '2px solid white',
+          borderRadius: '50%',
+          right: '-12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
         }}
-      />
+      >
+        <ImageIcon className="w-3 h-3 text-white" />
+      </Handle>
     </div>
   );
 }

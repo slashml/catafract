@@ -3,6 +3,7 @@
 import { memo, useCallback, useState, ChangeEvent } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { ImageNode } from '../types';
+import { Image as ImageIcon } from 'lucide-react';
 
 function GenerationNode({ data, id }: NodeProps<ImageNode>) {
   const [prompt, setPrompt] = useState(data.prompt || '');
@@ -22,7 +23,6 @@ function GenerationNode({ data, id }: NodeProps<ImageNode>) {
     setIsGenerating(true);
 
     try {
-      // Dispatch event to get connected input images from parent
       const event = new CustomEvent('generateImage', {
         detail: { nodeId: id, prompt }
       });
@@ -36,91 +36,195 @@ function GenerationNode({ data, id }: NodeProps<ImageNode>) {
   }, [prompt, id]);
 
   return (
-    <div style={{
-      padding: '10px',
-      border: '2px solid #8b5cf6',
-      borderRadius: '8px',
-      background: 'white',
-      minWidth: '250px',
-    }}>
-      <div style={{
-        fontWeight: 'bold',
-        marginBottom: '10px',
-        color: '#8b5cf6',
-      }}>
-        Generate Image
-      </div>
-
-      <textarea
-        value={prompt}
-        onChange={handlePromptChange}
-        placeholder="Enter your prompt..."
+    <div style={{ position: 'relative' }}>
+      {/* Floating Header */}
+      <div
         style={{
-          width: '100%',
-          minHeight: '60px',
-          padding: '8px',
-          borderRadius: '4px',
-          border: '1px solid #e5e7eb',
-          fontSize: '12px',
-          resize: 'vertical',
-          marginBottom: '10px',
-        }}
-      />
-
-      <button
-        onClick={handleGenerate}
-        disabled={isGenerating}
-        style={{
-          width: '100%',
-          padding: '8px',
-          backgroundColor: isGenerating ? '#9ca3af' : '#8b5cf6',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: isGenerating ? 'not-allowed' : 'pointer',
-          fontWeight: 'bold',
-          fontSize: '12px',
+          position: 'absolute',
+          top: '-24px',
+          left: '0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
         }}
       >
-        {isGenerating ? 'Generating...' : 'Generate'}
-      </button>
+        <ImageIcon className="w-3 h-3 text-gray-500" />
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 500,
+          color: '#6b7280',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        }}>
+          Image Generator
+        </span>
+      </div>
 
-      {data.image && (
-        <div style={{ marginTop: '10px' }}>
-          <img
-            src={data.image}
-            alt="Generated"
-            style={{
-              width: '100%',
-              maxWidth: '250px',
-              borderRadius: '4px',
-              border: '1px solid #e5e7eb',
-            }}
-          />
+      {/* Main Container */}
+      <div
+        style={{
+          padding: '0',
+          border: '1px solid #e5e7eb',
+          borderRadius: '16px',
+          background: 'white',
+          minWidth: '280px',
+          minHeight: '280px',
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}
+      >
+        {/* Image Display */}
+        {data.image && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+            <img
+              src={data.image}
+              alt="Generated"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+            {/* Gradient Overlay for Text Readability */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+              pointerEvents: 'none',
+            }} />
+          </div>
+        )}
+
+        {/* Content Area */}
+        <div style={{
+          padding: '16px',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: data.image ? 'flex-end' : 'flex-start',
+          zIndex: 1,
+          position: 'relative',
+          height: '100%',
+        }}>
+          {/* Prompt Input / Overlay */}
+          <div style={{ marginBottom: data.image ? '0' : '12px' }}>
+            {!data.image && (
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                fontWeight: 500,
+                color: '#6b7280',
+                marginBottom: '6px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Prompt
+              </label>
+            )}
+
+            {data.image ? (
+              <p style={{
+                color: 'white',
+                fontSize: '13px',
+                fontWeight: 500,
+                margin: 0,
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              }}>
+                {prompt}
+              </p>
+            ) : (
+              <textarea
+                value={prompt}
+                onChange={handlePromptChange}
+                placeholder="Describe your image..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1px solid #e5e7eb',
+                  fontSize: '14px',
+                  resize: 'vertical',
+                  background: '#f9fafb',
+                  color: '#1f2937',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                }}
+              />
+            )}
+          </div>
+
+          {/* Generate Button - Only show if no image or generating */}
+          {(!data.image || isGenerating) && (
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: isGenerating ? '#9ca3af' : '#1f2937',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+                fontSize: '13px',
+                transition: 'background-color 0.2s',
+                marginTop: 'auto',
+              }}
+            >
+              {isGenerating ? 'Generating...' : 'Generate Image'}
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Input handle - can accept multiple connections */}
+      {/* Input Handle */}
       <Handle
         type="target"
         position={Position.Left}
         style={{
-          background: '#8b5cf6',
-          width: '12px',
-          height: '12px',
+          width: '24px',
+          height: '24px',
+          background: '#1f2937',
+          border: '2px solid white',
+          borderRadius: '50%',
+          left: '-12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
         }}
-      />
+      >
+        <ImageIcon className="w-3 h-3 text-white" />
+      </Handle>
 
-      {/* Output handle */}
+      {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}
         style={{
-          background: '#8b5cf6',
-          width: '12px',
-          height: '12px',
+          width: '24px',
+          height: '24px',
+          background: '#1f2937',
+          border: '2px solid white',
+          borderRadius: '50%',
+          right: '-12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
         }}
-      />
+      >
+        <ImageIcon className="w-3 h-3 text-white" />
+      </Handle>
     </div>
   );
 }

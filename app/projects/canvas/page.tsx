@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, MouseEvent as ReactMouseEvent } from "react";
+import { useState, useEffect, useCallback, useRef, MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -49,6 +49,7 @@ export default function CanvasPage() {
     const [edges, setEdges] = useState<Edge[]>([]);
     const [nodeId, setNodeId] = useState(1);
     const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [contextMenu, setContextMenu] = useState<{
         x: number;
@@ -72,18 +73,50 @@ export default function CanvasPage() {
         []
     );
 
-    const addUploadNode = useCallback(() => {
+    const addUploadNode = useCallback((imageUrl?: string) => {
         const id = `upload-${nodeId}`;
         const newNode: ImageNode = {
             id,
             type: 'upload',
             position: { x: 100, y: 100 + nodeId * 50 },
-            data: { type: 'upload' },
+            data: { type: 'upload', image: imageUrl },
         };
         setNodes((nds) => [...nds, newNode]);
         setNodeId((prev) => prev + 1);
         analytics.trackNodeAdded('upload');
     }, [nodeId]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            // Create FormData to send the file
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Upload to Azure via API
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+
+            const { url } = await response.json();
+            addUploadNode(url);
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            alert('Failed to upload image. Please try again.');
+        }
+
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
 
     const addGenerationNode = useCallback(() => {
         const id = `generation-${nodeId}`;
@@ -242,6 +275,13 @@ export default function CanvasPage() {
 
     return (
         <div className="h-screen w-screen bg-[#FDFCF8] relative overflow-hidden font-sans">
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileUpload}
+            />
             {/* Dotted Background */}
             <div
                 className="absolute inset-0 pointer-events-none"
@@ -343,7 +383,7 @@ export default function CanvasPage() {
                     <div className="p-2 space-y-1">
                         <button
                             onClick={() => {
-                                addUploadNode();
+                                fileInputRef.current?.click();
                                 setContextMenu({ ...contextMenu, visible: false });
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left transition-colors text-gray-700"
