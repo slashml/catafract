@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     ReactFlow,
+    ReactFlowProvider,
+    useReactFlow,
     applyNodeChanges,
     applyEdgeChanges,
     addEdge,
@@ -42,7 +44,7 @@ const nodeTypes: NodeTypes = {
     generation: GenerationNode,
 };
 
-export default function CanvasPage() {
+function Canvas() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [nodes, setNodes] = useState<ImageNode[]>([]);
@@ -51,11 +53,14 @@ export default function CanvasPage() {
     const [showProjectMenu, setShowProjectMenu] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [contextMenu, setContextMenu] = useState<{
-        x: number;
-        y: number;
-        visible: boolean;
-    }>({ x: 0, y: 0, visible: false });
+    const [cursorInfo, setCursorInfo] = useState({
+        isRightClick: false,
+        xScreen: 0,
+        yScreen: 0,
+        xFlow: 0,
+        yFlow: 0
+    });
+    const { screenToFlowPosition } = useReactFlow();
 
     const onNodesChange = useCallback(
         (changes: NodeChange[]) =>
@@ -118,12 +123,12 @@ export default function CanvasPage() {
         }
     };
 
-    const addGenerationNode = useCallback(() => {
+    const addGenerationNode = useCallback((xFlow: number, yFlow: number) => {
         const id = `generation-${nodeId}`;
         const newNode: ImageNode = {
             id,
             type: 'generation',
-            position: { x: 400, y: 100 + nodeId * 50 },
+            position: { x: xFlow, y: yFlow },
             data: { type: 'generation' },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -253,17 +258,24 @@ export default function CanvasPage() {
 
     const handleContextMenu = useCallback((e: ReactMouseEvent) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, visible: true });
+        const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        setCursorInfo({
+            isRightClick: true,
+            xScreen: e.clientX,
+            yScreen: e.clientY,
+            xFlow: flowPosition.x,
+            yFlow: flowPosition.y
+        });
     }, []);
 
     const onCanvasClick = useCallback(() => {
-        if (contextMenu.visible) {
-            setContextMenu({ ...contextMenu, visible: false });
+        if (cursorInfo.isRightClick) {
+            setCursorInfo({ isRightClick: false, xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0 });
         }
         if (showProjectMenu) {
             setShowProjectMenu(false);
         }
-    }, [contextMenu, showProjectMenu]);
+    }, [cursorInfo, showProjectMenu]);
 
     if (status === 'loading') {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
@@ -375,16 +387,16 @@ export default function CanvasPage() {
             </div>
 
             {/* Context Menu */}
-            {contextMenu.visible && (
+            {cursorInfo.isRightClick && (
                 <div
                     className="absolute bg-[#FDFCF8] rounded-xl shadow-xl border border-gray-200 w-64 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100"
-                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    style={{ top: cursorInfo.yScreen, left: cursorInfo.xScreen }}
                 >
                     <div className="p-2 space-y-1">
                         <button
                             onClick={() => {
                                 fileInputRef.current?.click();
-                                setContextMenu({ ...contextMenu, visible: false });
+                                setCursorInfo({ isRightClick: false, xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0 });
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left transition-colors text-gray-700"
                         >
@@ -402,8 +414,8 @@ export default function CanvasPage() {
                         <div className="space-y-1">
                             <button
                                 onClick={() => {
-                                    addGenerationNode();
-                                    setContextMenu({ ...contextMenu, visible: false });
+                                    addGenerationNode(cursorInfo.xFlow, cursorInfo.yFlow);
+                                    setCursorInfo({ isRightClick: false, xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0 });
                                 }}
                                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left transition-colors text-gray-700"
                             >
@@ -417,5 +429,13 @@ export default function CanvasPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function CanvasPage() {
+    return (
+        <ReactFlowProvider>
+            <Canvas />
+        </ReactFlowProvider>
     );
 }
