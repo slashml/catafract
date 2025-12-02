@@ -14,6 +14,7 @@ const databaseName = "catafract";
 
 const usersContainer = "users";
 const projectsContainer = "projects";
+const canvasesContainer = "canvas";
 const generationsContainer = "generations";
 
 export async function uploadToBlob(file: Buffer, filename: string, mimeType: string): Promise<string> {
@@ -114,5 +115,35 @@ export async function getProjects(userId: string) {
   } catch (error) {
     console.log("Error finding projects:", error);
     return [];
+  }
+}
+
+export async function saveCanvas(canvas: any) {
+  const database = cosmosClient.database(databaseName);
+  const container = database.container(canvasesContainer);
+  console.log("Canvas to save:", canvas);
+
+  const { resource } = await container.items.upsert(canvas);
+  return resource;
+}
+
+export async function getCanvas(projectId: string) {
+  const database = cosmosClient.database(databaseName);
+  const container = database.container(canvasesContainer);
+
+  try {
+    const { resources } = await container.items.query({
+      query: "SELECT * FROM c WHERE c.projectId = @projectId",
+      parameters: [{ name: "@projectId", value: projectId }]
+    }).fetchAll();
+
+    if (resources.length > 0) {
+      return resources[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.log("Error finding canvas:", error);
+    return null;
   }
 }

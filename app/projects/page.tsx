@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { analytics } from '@/lib/mixpanel';
 import { useUserStore } from '@/app/store/useUserStore';
 import { useProjectStore } from '@/app/projects/store/useProjectStore';
+import { useCanvasStore } from '@/app/projects/canvas/[id]/store/useCanvasStore';
 
 import { Search, Plus, Workflow, Home, Image as ImageIcon, Video, Wand2, PenTool, Type, Folder } from "lucide-react";
 import { useRouter } from 'next/navigation'
@@ -14,6 +15,7 @@ export default function ProjectsPage() {
     const { data: session, status } = useSession();
     const { userData, isUserLoading } = useUserStore();
     const { projectData, isProjectLoading, fetchProjectData } = useProjectStore();
+    const { setCanvasData, setLoading } = useCanvasStore();
     const router = useRouter();
 
 
@@ -54,7 +56,7 @@ export default function ProjectsPage() {
     };
 
     const createNewProject = async () => {
-        const response = await fetch('/api/user/project', {
+        const projectResponse = await fetch('/api/user/project', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -64,7 +66,26 @@ export default function ProjectsPage() {
                 name: "Untitled Project"
             }),
         });
-        const project = await response.json();
+        const project = await projectResponse.json();
+
+        const canvasResponse = await fetch('/api/user/project/canvas', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                projectId: project.id
+            }),
+        });
+        const canvas = await canvasResponse.json();
+
+        setCanvasData({
+            id: canvas.id,
+            projectId: canvas.projectId,
+            nodes: canvas.nodes,
+            edges: canvas.edges,
+        });
+        setLoading(false);
         router.push(`/projects/canvas/${project.id}`);
     };
 

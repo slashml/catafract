@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, MouseEvent as ReactMouseEvent
 import Image from "next/image";
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -19,10 +20,6 @@ import {
     NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import UploadNode from './components/UploadNode';
-import GenerationNode from './components/GenerationNode';
-import { ImageNode, ImageNodeData } from './types';
-import { analytics } from '@/lib/mixpanel';
 import {
     MousePointer2,
     Hand,
@@ -40,6 +37,12 @@ import {
     Download,
     Star,
 } from "lucide-react";
+import { useDebounce } from 'use-debounce';
+import UploadNode from './components/UploadNode';
+import GenerationNode from './components/GenerationNode';
+import { ImageNode, ImageNodeData } from './types';
+import { analytics } from '@/lib/mixpanel';
+import { useCanvasStore } from "../../canvas/[id]/store/useCanvasStore";
 
 const nodeTypes: NodeTypes = {
     upload: UploadNode,
@@ -93,9 +96,15 @@ function NodeMenuBar({ cursorInfo }: { cursorInfo: { nodeId: string, xScreen: nu
 
 function Canvas() {
     const { data: session, status } = useSession();
+    const { id: projectId } = useParams<{ id: string }>();
+    const { canvasData, isCanvasLoading, fetchCanvasData } = useCanvasStore()
     const router = useRouter();
     const [nodes, setNodes] = useState<ImageNode[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
+
+    const [debouncedNodes] = useDebounce(nodes, 1000);
+    const [debouncedEdges] = useDebounce(edges, 1000);
+
     const [nodeId, setNodeId] = useState(1);
     const [showProjectMenu, setShowProjectMenu] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +149,19 @@ function Canvas() {
         analytics.trackNodeAdded('upload');
     }, [nodeId]);
 
+    const addGenerationNode = useCallback((xFlow: number, yFlow: number) => {
+        const id = `generation-${nodeId}`;
+        const newNode: ImageNode = {
+            id,
+            type: 'generation',
+            position: { x: xFlow, y: yFlow },
+            data: { type: 'generation' },
+        };
+        setNodes((nds) => [...nds, newNode]);
+        setNodeId((prev) => prev + 1);
+        analytics.trackNodeAdded('generation');
+    }, [nodeId]);
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -172,19 +194,6 @@ function Canvas() {
         }
     };
 
-    const addGenerationNode = useCallback((xFlow: number, yFlow: number) => {
-        const id = `generation-${nodeId}`;
-        const newNode: ImageNode = {
-            id,
-            type: 'generation',
-            position: { x: xFlow, y: yFlow },
-            data: { type: 'generation' },
-        };
-        setNodes((nds) => [...nds, newNode]);
-        setNodeId((prev) => prev + 1);
-        analytics.trackNodeAdded('generation');
-    }, [nodeId]);
-
     // Handle node data updates
     useEffect(() => {
         const handleNodeDataUpdate = (event: Event) => {
@@ -206,8 +215,16 @@ function Canvas() {
     }, []);
 
     useEffect(() => {
+        if (!projectId) return;
+        fetchCanvasData(projectId);
         analytics.trackCanvasLoaded();
-    }, []);
+    }, [projectId]);
+
+    useEffect(() => {
+        if (isCanvasLoading) return;
+        setNodes(canvasData?.nodes || []);
+        setEdges(canvasData?.edges || []);
+    }, [isCanvasLoading]);
 
     // Handle image generation
     useEffect(() => {
@@ -305,6 +322,19 @@ function Canvas() {
         }
     }, [status, router]);
 
+    useEffect(() => {
+        const saveCanvas = async () => {
+            if (!canvasData) return;
+            await fetch('/api/user/project/canvas', {
+                method: 'POST',
+                body: JSON.stringify({ id: canvasData.id, projectId: canvasData.projectId, nodes: debouncedNodes, edges: debouncedEdges })
+            });
+        };
+
+        saveCanvas();
+    }, [debouncedNodes, debouncedEdges, canvasData]);
+    //canvasData might cause infinite loop. be wary
+
     const handleContextMenu = useCallback((e: MouseEvent | ReactMouseEvent) => {
         e.preventDefault();
         const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -346,23 +376,6 @@ function Canvas() {
             setShowProjectMenu(false);
         }
     }, [cursorInfo, showProjectMenu]);
-
-    const onDownloadClick = (nodeId: string) => {
-        const node = nodes.find((node) => node.id === nodeId);
-        if (node && node.data.image) {
-            const link = document.createElement('a');
-            link.href = node.data.image;
-            link.download = `image-${node.id}.jpg`;
-            link.click();
-        }
-
-        setCursorInfo({
-            ...cursorInfo,
-            isRightClickCanvas: false,
-            isRightClickNode: false,
-            xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0
-        });
-    };
 
     if (status === 'loading') {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
