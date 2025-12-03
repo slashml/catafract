@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        console.log("Before sending to CosmosDB:", body);
         const canvas = await saveCanvas(body);
 
         return NextResponse.json(canvas, { status: 200 });
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
         }
         const canvas = await getCanvas(projectId);
-        console.log("Canvas fetched:", canvas);
         return NextResponse.json(canvas, { status: 200 });
     } catch (error) {
         console.error('Error fetching user status:', error);

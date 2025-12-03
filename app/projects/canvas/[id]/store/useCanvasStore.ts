@@ -13,6 +13,7 @@ interface CanvasStore {
     setCanvasData: (data: CanvasData | null) => void;
     setLoading: (loading: boolean) => void;
     fetchCanvasData: (projectId: string) => Promise<void>;
+    resetCanvasData: () => void;
 }
 
 export const useCanvasStore = create<CanvasStore>((set) => ({
@@ -36,4 +37,5 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
             set({ isCanvasLoading: false });
         }
     },
+    resetCanvasData: () => set({ canvasData: null, isCanvasLoading: true }),
 }));

@@ -121,7 +121,6 @@ export async function getProjects(userId: string) {
 export async function saveCanvas(canvas: any) {
   const database = cosmosClient.database(databaseName);
   const container = database.container(canvasesContainer);
-  console.log("Canvas to save:", canvas);
 
   const { resource } = await container.items.upsert(canvas);
   return resource;

@@ -1,3 +1,7 @@
+### To fix
+- [ ] sometimes nodes swap why? it swaps last saved nodes with current nodes instead of creating new ones :think
+- [ ] if empty canvasData it will delete all of it lol.
+
 ### TODO
 
 - [ ] Either filter Spanish and English videos or move Spanish videos to bottom

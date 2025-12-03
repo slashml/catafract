@@ -97,7 +97,8 @@ function NodeMenuBar({ cursorInfo }: { cursorInfo: { nodeId: string, xScreen: nu
 function Canvas() {
     const { data: session, status } = useSession();
     const { id: projectId } = useParams<{ id: string }>();
-    const { canvasData, isCanvasLoading, fetchCanvasData } = useCanvasStore()
+    const { canvasData, isCanvasLoading, fetchCanvasData, resetCanvasData } = useCanvasStore()
+    const [isInitialized, setIsInitialized] = useState(false);
     const router = useRouter();
     const [nodes, setNodes] = useState<ImageNode[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
@@ -218,12 +219,25 @@ function Canvas() {
         if (!projectId) return;
         fetchCanvasData(projectId);
         analytics.trackCanvasLoaded();
+
+        return () => {
+            resetCanvasData();
+        };
     }, [projectId]);
 
     useEffect(() => {
         if (isCanvasLoading) return;
-        setNodes(canvasData?.nodes || []);
-        setEdges(canvasData?.edges || []);
+        const nodes = canvasData?.nodes || [];
+        const edges = canvasData?.edges || [];
+        setNodes(nodes);
+        setEdges(edges);
+
+        const maxId = nodes.reduce((max, node) => {
+            const id = parseInt(node.id.split('-')[1]);
+            return Math.max(max, id);
+        }, 0);
+        setNodeId(maxId + 1);
+        setIsInitialized(true);
     }, [isCanvasLoading]);
 
     // Handle image generation
@@ -324,7 +338,7 @@ function Canvas() {
 
     useEffect(() => {
         const saveCanvas = async () => {
-            if (!canvasData) return;
+            if (!canvasData || nodes !== debouncedNodes || !isInitialized) return;
             await fetch('/api/user/project/canvas', {
                 method: 'POST',
                 body: JSON.stringify({ id: canvasData.id, projectId: canvasData.projectId, nodes: debouncedNodes, edges: debouncedEdges })
@@ -332,7 +346,7 @@ function Canvas() {
         };
 
         saveCanvas();
-    }, [debouncedNodes, debouncedEdges, canvasData]);
+    }, [debouncedNodes, debouncedEdges, canvasData, isInitialized]);
     //canvasData might cause infinite loop. be wary
 
     const handleContextMenu = useCallback((e: MouseEvent | ReactMouseEvent) => {
@@ -377,7 +391,7 @@ function Canvas() {
         }
     }, [cursorInfo, showProjectMenu]);
 
-    if (status === 'loading') {
+    if (status === 'loading' || !isInitialized) {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
     }
 
