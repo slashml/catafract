@@ -38,8 +38,9 @@ import {
     Star,
 } from "lucide-react";
 import { useDebounce } from 'use-debounce';
-import UploadNode from './components/UploadNode';
-import GenerationNode from './components/GenerationNode';
+import UploadNode from './_components/UploadNode';
+import GenerationNode from './_components/GenerationNode';
+import EmptyState from './_components/EmptyState';
 import { ImageNode, ImageNodeData } from './types';
 import { analytics } from '@/lib/mixpanel';
 import { useCanvasStore } from "../../canvas/[id]/store/useCanvasStore";
@@ -406,6 +407,14 @@ function Canvas() {
                 accept="image/*"
                 onChange={handleFileUpload}
             />
+
+            {nodes.length === 0 && (
+                <EmptyState
+                    onUpload={() => fileInputRef.current?.click()}
+                    onAddGeneration={() => addGenerationNode(0, 0)}
+                />
+            )}
+
             {/* Dotted Background */}
             <div
                 className="absolute inset-0 pointer-events-none"
