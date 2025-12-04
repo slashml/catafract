@@ -11,10 +11,23 @@ function GenerationNode({ data, id }: NodeProps<ImageNode>) {
   const [secondsRemaining, setSecondsRemaining] = useState(30);
   const [dimensions, setDimensions] = useState({ width: 256, height: 256 });
 
-  const handlePromptChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
-    setPrompt(event.target.value);
-    data.prompt = event.target.value;
-  }, [data]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isGenerating && secondsRemaining > 0) {
+      interval = setInterval(() => {
+        setSecondsRemaining((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isGenerating, secondsRemaining]);
+
+  // Sync local generating state with data prop if controlled by parent
+  useEffect(() => {
+    if (typeof data.isGenerating === 'boolean') {
+      setIsGenerating(data.isGenerating);
+    }
+  }, [data.isGenerating]);
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth, naturalHeight } = e.currentTarget;
@@ -61,29 +74,12 @@ function GenerationNode({ data, id }: NodeProps<ImageNode>) {
     });
   };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isGenerating && secondsRemaining > 0) {
-      interval = setInterval(() => {
-        setSecondsRemaining((prev) => Math.max(0, prev - 1));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isGenerating, secondsRemaining]);
-
-  // Sync local generating state with data prop if controlled by parent
-  useEffect(() => {
-    if (typeof data.isGenerating === 'boolean') {
-      setIsGenerating(data.isGenerating);
-    }
-  }, [data.isGenerating]);
+  const handlePromptChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+    setPrompt(event.target.value);
+    data.prompt = event.target.value;
+  }, [data]);
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) {
-      alert('Please enter a prompt');
-      return;
-    }
-
     setIsGenerating(true);
     setSecondsRemaining(30);
 
@@ -206,7 +202,9 @@ function GenerationNode({ data, id }: NodeProps<ImageNode>) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleGenerate();
+                      if (prompt.trim()) {
+                        handleGenerate();
+                      }
                     }
                   }}
                 />

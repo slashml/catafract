@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { getServerSession } from 'next-auth';
 import { uploadToBlob, saveToCosmos } from '@/lib/azure';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'GEMINI_API_KEY not configured. Please add GEMINI_API_KEY to your .env.local file' },
@@ -36,11 +37,8 @@ export async function POST(request: NextRequest) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-
-    // Prepare the contents array with images and prompt
     const contents: any[] = [];
 
-    // Add all input images
     for (const imageData of images) {
       let base64Data = '';
       let mimeType = 'image/png';
@@ -75,18 +73,14 @@ export async function POST(request: NextRequest) {
         },
       });
     }
-
-    // Add the text prompt
     contents.push({ text: prompt });
 
-    // Generate image using Gemini 2.5 Flash Image model
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
       // model: 'gemini-2.5-flash-image',
       contents: contents,
     });
 
-    // Extract the generated image from the response
     let generatedImageBase64 = null;
     let generatedText = null;
 
@@ -146,13 +140,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      image: generatedImageBase64, // Still return base64 for immediate display
+      imageBase64: generatedImageBase64, // Still return base64 for immediate display
       imageUrl: imageUrl, // Also return the Azure URL
       text: generatedText,
     });
 
   } catch (error) {
-    console.error('Error in generate-image API:', error);
+    console.error('Error in generate image API:', error);
     return NextResponse.json(
       {
         error: 'Failed to generate image',
@@ -162,4 +156,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

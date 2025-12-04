@@ -141,7 +141,7 @@ export default function App() {
         });
 
         // Call API to generate image
-        const response = await fetch('/api/generate-image', {
+        const response = await fetch('/api/image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: inputImages, prompt }),

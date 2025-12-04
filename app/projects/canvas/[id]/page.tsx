@@ -279,7 +279,7 @@ function Canvas() {
                 });
 
                 // Call API to generate image
-                const response = await fetch('/api/generate-image', {
+                const response = await fetch('/api/image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ images: inputImages, prompt }),
@@ -295,7 +295,7 @@ function Canvas() {
                 setNodes((nds) =>
                     nds.map((node) =>
                         node.id === nodeId
-                            ? { ...node, data: { ...node.data, image: data.image, isGenerating: false } }
+                            ? { ...node, data: { ...node.data, image: data.imageUrl, isGenerating: false } }
                             : node
                     )
                 );
