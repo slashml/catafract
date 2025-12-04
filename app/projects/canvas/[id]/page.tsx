@@ -115,10 +115,9 @@ function Canvas() {
         isRightClickNode: false,
         nodeId: '',
         xScreen: 0,
-        yScreen: 0,
-        xFlow: 0,
-        yFlow: 0
+        yScreen: 0
     });
+    const flowPositionRef = useRef({ x: 0, y: 0 });
     const { screenToFlowPosition } = useReactFlow();
 
     const onNodesChange = useCallback(
@@ -137,12 +136,12 @@ function Canvas() {
         []
     );
 
-    const addUploadNode = useCallback((imageUrl?: string) => {
+    const addUploadNode = useCallback((imageUrl: string, xFlow: number, yFlow: number) => {
         const id = `upload-${nodeId}`;
         const newNode: ImageNode = {
             id,
             type: 'upload',
-            position: { x: 100, y: 100 + nodeId * 50 },
+            position: { x: xFlow, y: yFlow },
             data: { type: 'upload', image: imageUrl },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -183,7 +182,7 @@ function Canvas() {
             }
 
             const { url } = await response.json();
-            addUploadNode(url);
+            addUploadNode(url, flowPositionRef.current.x, flowPositionRef.current.y);
         } catch (error) {
             console.error('Error uploading file:', error);
             alert('Failed to upload image. Please try again.');
@@ -352,38 +351,37 @@ function Canvas() {
     const handleContextMenu = useCallback((e: MouseEvent | ReactMouseEvent) => {
         e.preventDefault();
         const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        flowPositionRef.current = flowPosition;
         setCursorInfo({
             ...cursorInfo,
             isRightClickCanvas: true,
             isRightClickNode: false,
             xScreen: e.clientX,
             yScreen: e.clientY,
-            xFlow: flowPosition.x,
-            yFlow: flowPosition.y
         });
     }, []);
 
     const handleNodeContextMenu = useCallback((e: ReactMouseEvent, node: ImageNode) => {
         e.preventDefault();
         const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        flowPositionRef.current = flowPosition;
         setCursorInfo({
             isRightClickCanvas: false,
             isRightClickNode: true,
             nodeId: node.id,
             xScreen: e.clientX,
             yScreen: e.clientY,
-            xFlow: flowPosition.x,
-            yFlow: flowPosition.y
         });
     }, []);
 
     const onCanvasClick = useCallback(() => {
         if (cursorInfo.isRightClickCanvas || cursorInfo.isRightClickNode) {
+            flowPositionRef.current = { x: 0, y: 0 };
             setCursorInfo({
                 ...cursorInfo,
                 isRightClickCanvas: false,
                 isRightClickNode: false,
-                xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0
+                xScreen: 0, yScreen: 0
             });
         }
         if (showProjectMenu) {
@@ -497,6 +495,7 @@ function Canvas() {
                     onConnect={onConnect}
                     nodeTypes={nodeTypes}
                     fitView
+                    minZoom={0.001}
                     proOptions={{ hideAttribution: true }}
                 />
             </div>
@@ -514,8 +513,7 @@ function Canvas() {
                                 setCursorInfo({
                                     ...cursorInfo,
                                     isRightClickCanvas: false,
-                                    isRightClickNode: false,
-                                    xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0
+                                    isRightClickNode: false
                                 });
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left transition-colors text-gray-700"
@@ -534,12 +532,11 @@ function Canvas() {
                         <div className="space-y-1">
                             <button
                                 onClick={() => {
-                                    addGenerationNode(cursorInfo.xFlow, cursorInfo.yFlow);
+                                    addGenerationNode(flowPositionRef.current.x, flowPositionRef.current.y);
                                     setCursorInfo({
                                         ...cursorInfo,
                                         isRightClickCanvas: false,
-                                        isRightClickNode: false,
-                                        xScreen: 0, yScreen: 0, xFlow: 0, yFlow: 0
+                                        isRightClickNode: false
                                     });
                                 }}
                                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left transition-colors text-gray-700"
