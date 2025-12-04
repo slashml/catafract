@@ -52,6 +52,12 @@ export const analytics = {
         mixpanel.identify(userId);
     },
 
+    trackSignOut: () => {
+        if (!MIXPANEL_TOKEN) return;
+        mixpanel.track('Sign Out');
+        mixpanel.reset();
+    },
+
     trackNodeAdded: (nodeType: 'upload' | 'generation') => {
         if (!MIXPANEL_TOKEN) return;
         mixpanel.track('Node Added', {

@@ -2,13 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { analytics } from '@/lib/mixpanel';
 import { useUserStore } from '@/app/store/useUserStore';
 import { useProjectStore } from '@/app/projects/store/useProjectStore';
 import { useCanvasStore } from '@/app/projects/canvas/[id]/store/useCanvasStore';
 
-import { Search, Plus, Workflow, Home, Image as ImageIcon, Video, Wand2, PenTool, Type, Folder } from "lucide-react";
+import { Search, Plus, Workflow, Home, Image as ImageIcon, Video, Wand2, PenTool, Type, Folder, User, LogOut } from "lucide-react";
 import { useRouter } from 'next/navigation'
 
 export default function ProjectsPage() {
@@ -17,6 +17,8 @@ export default function ProjectsPage() {
     const { projectData, isProjectLoading, fetchProjectData } = useProjectStore();
     const { setCanvasData, setLoading } = useCanvasStore();
     const router = useRouter();
+
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
 
 
@@ -40,9 +42,10 @@ export default function ProjectsPage() {
         if (userData?.isPro) {
             window.location.href = '/api/portal';
         } else {
-            // Replace with your actual product ID or just link to checkout
-            // If you have a specific product ID, add ?products=PRODUCT_ID
-            const productId = 'e1c52c1a-e8e0-4340-bda2-7cfb368f74ae';
+            let productId = 'e1c52c1a-e8e0-4340-bda2-7cfb368f74ae';
+            if (process.env.NEXT_PUBLIC_SETUP === "local") {
+                productId = '4546a385-edca-4363-937e-48a88413bedb';
+            }
 
             const params = new URLSearchParams();
             params.append('products', productId);
@@ -53,6 +56,11 @@ export default function ProjectsPage() {
 
             window.location.href = `/api/checkout?${params.toString()}`;
         }
+    };
+
+    const handleSignOut = () => {
+        analytics.trackSignOut();
+        signOut();
     };
 
     const createNewProject = async () => {
@@ -109,17 +117,48 @@ export default function ProjectsPage() {
                 </div> */}
 
                 {/* Right Side */}
-                {/* <div className="flex items-center justify-end gap-4 w-1/3"> */}
-                {/* <div className="px-3 py-1.5 bg-[#D9D9CD] rounded-full text-xs font-medium text-gray-600">API Waitlist</div> */}
-                {/* <button className="p-2 hover:bg-gray-100 rounded-full"><Search className="w-4 h-4" /></button> */}
-                {/* <button
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                        disabled={isPro}
+                <div className="flex items-center justify-end gap-4 w-1/3">
+                    <button
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover: cursor-pointer transition-colors"
                         onClick={handleUpgrade}
                     >
-                        {isPro ? 'Already Pro' : 'Upgrade New'}
-                    </button> */}
-                {/* </div> */}
+                        {userData!.isPro ? 'Portal' : 'Upgrade'}
+                    </button>
+                    <div className="relative flex items-center gap-2">
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden hover:ring-2 hover:cursor-pointer hover:ring-gray-300 transition-all"
+                        >
+                            {userData?.image ? (
+                                <img
+                                    src={userData.image}
+                                    alt="User"
+                                    className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-600 text-white">
+                                    <User className="w-5 h-5" />
+                                </div>
+                            )}
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showUserMenu && (
+                            <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
+                                <div className="p-1">
+                                    <button
+                                        onClick={() => handleSignOut()}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer rounded-lg transition-colors"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Sign out
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Main Content */}

@@ -1,22 +1,13 @@
 import { Webhooks } from "@polar-sh/nextjs";
 import { updateUser } from "@/lib/azure";
 
+const polarWebhookSecret =
+    process.env.NEXT_PUBLIC_SETUP === "local" ?
+        process.env.POLAR_SANDBOX_WEBHOOK_SECRET! :
+        process.env.POLAR_WEBHOOK_SECRET!;
+
 export const POST = Webhooks({
-    webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
-    onSubscriptionCreated: async (payload: any) => {
-        console.log("Subscription created:", payload);
-
-        const payloadData = payload.data;
-        const userId = payloadData?.customer?.externalId;
-
-        if (userId) {
-            await updateUser(userId, {
-                isPro: true,
-                productId: payloadData.product?.id,
-                subscriptionStatus: payloadData.status
-            });
-        }
-    },
+    webhookSecret: polarWebhookSecret,
     onSubscriptionActive: async (payload: any) => {
         console.log("Subscription active:", payload);
         const payloadData = payload.data;
@@ -25,19 +16,18 @@ export const POST = Webhooks({
         if (userId) {
             await updateUser(userId, {
                 isPro: true,
-                productId: payloadData.product?.id,
+                polarCustomerId: payloadData.customer?.id,
                 subscriptionStatus: payloadData.status
             });
         }
     },
     onSubscriptionCanceled: async (payload: any) => {
-        console.log("Subscription canceled:", payload);
+        console.log("Subscription won't renew:", payload);
         const userId = payload.data?.customer?.externalId;
 
         if (userId) {
             await updateUser(userId, {
-                isPro: false,
-                subscriptionStatus: 'canceled'
+                subscriptionStatus: 'wont-renew'
             });
         }
     },
